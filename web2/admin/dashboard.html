@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>จัดการหนังสือ | หลังบ้าน</title><link rel="stylesheet" href="../css/style.css"></head>
+<body>
+<header><div class="container"><div class="navbar">
+ <div class="logo"><div class="logo-icon">🛠️</div><div><div class="logo-title">หลังบ้าน</div><div class="logo-subtitle">จัดการคลังหนังสือบาลี</div></div></div>
+ <div style="display:flex;gap:10px"><a href="../index.html" class="button button-secondary small" target="_blank">ดูเว็บไซต์</a><button class="button button-danger small" id="logout">ออกจากระบบ</button></div>
+</div></div></header>
+<main class="section"><div class="container">
+ <div class="stats" style="margin-bottom:24px">
+  <div class="stat-box"><div class="stat-number" id="sBooks">0</div><div class="stat-label">หนังสือทั้งหมด</div></div>
+  <div class="stat-box"><div class="stat-number" id="sCats">0</div><div class="stat-label">หมวดหมู่ที่ใช้งาน</div></div>
+  <div class="stat-box"><div class="stat-number">localStorage</div><div class="stat-label">ที่เก็บข้อมูล</div></div>
+ </div>
+
+ <div class="panel" style="margin-bottom:24px">
+  <h2 class="section-title" style="font-size:22px;margin-bottom:14px" id="formTitle">เพิ่มหนังสือใหม่</h2>
+  <form id="f"><input type="hidden" id="id">
+   <div class="form-grid">
+    <div class="field full"><label>ชื่อหนังสือ *</label><input id="title" required></div>
+    <div class="field"><label>หมวดหมู่ *</label><select id="category"></select></div>
+    <div class="field"><label>ระดับ</label><input id="level" placeholder="เช่น ระดับ: ป.ธ.๕"></div>
+    <div class="field"><label>ขนาดไฟล์</label><input id="size" placeholder="เช่น 12 MB"></div>
+    <div class="field"><label>ลิงก์/พาธไฟล์ PDF *</label><input id="file" required placeholder="books/ชื่อไฟล์.pdf หรือลิงก์ Google Drive"></div>
+    <div class="field full"><label>คำอธิบาย</label><textarea id="desc" rows="3"></textarea></div>
+   </div>
+   <button class="button button-primary" id="saveBtn">บันทึก</button>
+   <button type="button" class="button button-secondary hidden" id="cancel">ยกเลิกการแก้ไข</button>
+  </form>
+ </div>
+
+ <div class="panel">
+  <div class="section-head" style="margin-bottom:0"><h2 class="section-title" style="font-size:22px">รายการหนังสือ</h2>
+   <div class="search-box"><input id="s" placeholder="ค้นหาในตาราง..."></div></div>
+  <div class="toolbar">
+   <button class="button button-secondary small" id="exportBtn">⬇ สำรองข้อมูล (JSON)</button>
+   <button class="button button-secondary small" id="importBtn">⬆ นำเข้า JSON</button>
+   <button class="button button-danger small" id="resetBtn">รีเซ็ตเป็นค่าเริ่มต้น</button>
+   <input type="file" id="importFile" accept=".json" class="hidden">
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>#</th><th>ชื่อหนังสือ</th><th>หมวดหมู่</th><th>ระดับ</th><th>ขนาด</th><th>จัดการ</th></tr></thead><tbody id="rows"></tbody></table></div>
+ </div>
+</div></main>
+<script src="../js/common.js"></script>
+<script>
+if(!sessionStorage.getItem("pali_admin")) location.href="login.html";
+logout.onclick=()=>{sessionStorage.removeItem("pali_admin");location.href="login.html"};
+category.innerHTML=CATEGORIES.map(c=>`<option>${c}</option>`).join("");
+let books=getBooks();
+
+function render(){
+  sBooks.textContent=books.length; sCats.textContent=new Set(books.map(b=>b.category)).size;
+  const k=s.value.trim().toLowerCase();
+  rows.innerHTML=books.filter(b=>(b.title+b.category+b.level).toLowerCase().includes(k)).map(b=>`<tr>
+   <td>${b.id}</td><td>${esc(b.title)}</td><td>${esc(b.category)}</td><td>${esc(b.level)}</td><td>${esc(b.size)}</td>
+   <td style="white-space:nowrap"><button class="button button-secondary small" onclick="edit(${b.id})">แก้ไข</button>
+   <button class="button button-danger small" onclick="del(${b.id})">ลบ</button></td></tr>`).join("");
+}
+function persist(){saveBooks(books);render()}
+function resetForm(){f.reset();id.value="";formTitle.textContent="เพิ่มหนังสือใหม่";cancel.classList.add("hidden")}
+function edit(n){
+  const b=books.find(x=>x.id===n); if(!b)return;
+  id.value=b.id;title.value=b.title;category.value=b.category;level.value=b.level;size.value=b.size;file.value=b.file;desc.value=b.desc;
+  formTitle.textContent="แก้ไขหนังสือ #"+b.id;cancel.classList.remove("hidden");scrollTo({top:0,behavior:"smooth"});
+}
+function del(n){const b=books.find(x=>x.id===n);if(b&&confirm(`ลบ "${b.title}" ?`)){books=books.filter(x=>x.id!==n);persist()}}
+cancel.onclick=resetForm; s.oninput=render;
+f.onsubmit=e=>{
+  e.preventDefault();
+  const d={title:title.value.trim(),category:category.value,level:level.value.trim(),size:size.value.trim(),file:file.value.trim(),desc:desc.value.trim()};
+  if(id.value){books=books.map(b=>b.id==id.value?{...b,...d}:b)}
+  else{books.push({id:Math.max(0,...books.map(b=>b.id))+1,...d})}
+  persist();resetForm();
+};
+exportBtn.onclick=()=>{
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(books,null,2)],{type:"application/json"}));
+  a.download="pali-books-backup.json";a.click();
+};
+importBtn.onclick=()=>importFile.click();
+importFile.onchange=async()=>{
+  try{const d=JSON.parse(await importFile.files[0].text());
+   if(!Array.isArray(d)||!d.every(x=>x.title&&x.file))throw 0;
+   books=d.map((x,i)=>({id:x.id||i+1,category:CATEGORIES[0],level:"",desc:"",size:"",...x}));persist();alert("นำเข้าสำเร็จ "+books.length+" รายการ");
+  }catch(e){alert("ไฟล์ JSON ไม่ถูกต้อง")}
+  importFile.value="";
+};
+resetBtn.onclick=()=>{if(confirm("รีเซ็ตข้อมูลทั้งหมดเป็นค่าเริ่มต้น?")){books=defaultBooks();persist()}};
+render();
+</script></body></html>

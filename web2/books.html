@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>หนังสือ | คลังหนังสือบาลี</title><link rel="stylesheet" href="css/style.css"></head>
+<body><div id="site-header"></div>
+<main><section class="section"><div class="container">
+ <div class="section-head"><div><h2 class="section-title">รายการหนังสือ</h2><p class="section-subtitle">ค้นหาหนังสือหรือเลือกหมวดหมู่ที่ต้องการ</p></div>
+ <div class="search-box"><input id="q" placeholder="ค้นหา เช่น ธรรมบท, ป.ธ.๕, ไวยากรณ์"></div></div>
+ <div class="categories" id="cats"></div>
+ <div class="book-grid" id="grid"></div>
+ <div class="empty-message" id="empty">ไม่พบหนังสือที่ตรงกับคำค้นหา</div>
+</div></section></main>
+<div id="site-footer"></div>
+<script src="js/common.js"></script>
+<script>renderLayout("books.html");</script>
+<script>
+let all=[],cat="ทั้งหมด";
+cats.innerHTML=["ทั้งหมด",...CATEGORIES].map(c=>`<button class="category-button${c===cat?" active":""}" data-c="${c}">${c}</button>`).join("");
+cats.onclick=e=>{const c=e.target.dataset.c;if(!c)return;cat=c;cats.querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.c===c));show()};
+q.oninput=show;
+function show(){
+ const k=q.value.trim().toLowerCase();
+ const r=all.filter(b=>(cat==="ทั้งหมด"||b.category===cat)&&[b.title,b.category,b.level,b.desc].join(" ").toLowerCase().includes(k));
+ grid.innerHTML=r.map(b=>bookCard(b)).join("");
+ empty.style.display=r.length?"none":"block";
+}
+loadBooks().then(b=>{all=b;show()});
+</script></body></html>

@@ -1,0 +1,8 @@
+{
+  "name": "pali-library",
+  "version": "1.0.0",
+  "private": true,
+  "description": "คลังหนังสือบาลี — เว็บ HTML + เซิร์ฟเวอร์ Node.js ตัวเล็ก (ไม่มี dependency)",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

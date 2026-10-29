@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>เข้าสู่ระบบหลังบ้าน</title><link rel="stylesheet" href="../css/style.css"></head>
+<body><div class="login-wrap"><div class="panel">
+ <h2 class="section-title" style="font-size:26px;margin-bottom:6px">🔐 หลังบ้าน</h2>
+ <p class="section-subtitle" style="margin-bottom:20px">เข้าสู่ระบบเพื่อจัดการหนังสือ</p>
+ <div class="error" id="err">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
+ <div class="field"><label>ชื่อผู้ใช้</label><input id="u" autofocus></div>
+ <div class="field"><label>รหัสผ่าน</label><input id="p" type="password"></div>
+ <button class="button button-primary" style="width:100%" id="go">เข้าสู่ระบบ</button>
+ <p style="margin-top:16px;text-align:center"><a href="../index.html">← กลับหน้าเว็บไซต์</a></p>
+</div></div>
+<script>
+// โหมดมีเซิร์ฟเวอร์ (node server.js): ตรวจรหัสผ่านที่เซิร์ฟเวอร์ ตั้งค่าด้วย ADMIN_USER / ADMIN_PASS
+// โหมดไม่มีเซิร์ฟเวอร์ (โฮสต์ไฟล์ธรรมดา): ตรวจฝั่งเบราว์เซอร์ด้วยค่าด้านล่าง (ไม่ปลอดภัยจริง ใช้ส่วนตัวเท่านั้น)
+const ADMIN_USER="admin", ADMIN_PASS="123456789";
+
+function fail(msg){err.textContent=msg;err.style.display="block"}
+async function login(){
+  err.style.display="none";
+  let r=null;
+  try{r=await fetch("../api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u.value,password:p.value})})}catch(e){}
+  const isApi=r&&(r.headers.get("content-type")||"").includes("json");
+  if(isApi&&r.status===200){
+    const j=await r.json();
+    sessionStorage.setItem("pali_admin","1");sessionStorage.setItem("pali_admin_token",j.token);
+    location.href="dashboard.html";return;
+  }
+  if(isApi&&r.status===429)return fail("ลองผิดหลายครั้ง กรุณารอสักครู่");
+  if(isApi&&r.status===401)return fail("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+  // ไม่มีเซิร์ฟเวอร์ตอบกลับ → ตรวจฝั่งเบราว์เซอร์
+  if(u.value===ADMIN_USER&&p.value===ADMIN_PASS){
+    sessionStorage.setItem("pali_admin","1");sessionStorage.removeItem("pali_admin_token");
+    location.href="dashboard.html";
+  }else fail("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+}
+go.onclick=login;p.onkeydown=e=>{if(e.key==="Enter")login()};
+</script></body></html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>หน้าแรก | คลังหนังสือบาลี</title><link rel="stylesheet" href="css/style.css"></head>
+<body><div id="site-header"></div>
+<main>
+<section class="hero"><div class="container hero-grid">
+ <div><span class="badge">แหล่งรวมหนังสือบาลีสำหรับประชาชนทั่วไป</span>
+ <h1>อ่านหนังสือบาลีง่าย ๆ ดาวน์โหลดได้ทุกที่</h1>
+ <p>เผยแพร่หนังสือบาลี ไวยากรณ์ อรรถกถา แบบฝึกแปล และเอกสารเตรียมสอบ ให้ผู้สนใจเข้าถึงความรู้ได้สะดวก</p>
+ <div class="hero-actions"><a href="books.html" class="button button-primary">ดูหนังสือทั้งหมด</a><a href="about.html" class="button button-secondary">เรียนรู้เพิ่มเติม</a></div></div>
+ <div class="hero-card"><div class="stats">
+  <div class="stat-box"><div class="stat-number" id="statBooks">0</div><div class="stat-label">หนังสือในคลัง</div></div>
+  <div class="stat-box"><div class="stat-number" id="statCats">0</div><div class="stat-label">หมวดหมู่</div></div>
+  <div class="stat-box"><div class="stat-number">PDF</div><div class="stat-label">ดาวน์โหลดง่าย</div></div></div></div>
+</div></section>
+<section class="section"><div class="container">
+ <div class="section-head"><div><h2 class="section-title">หนังสือล่าสุด</h2><p class="section-subtitle">6 รายการที่เพิ่มล่าสุด</p></div><a href="books.html" class="button button-secondary">ดูทั้งหมด →</a></div>
+ <div class="book-grid" id="latest"></div></div></section>
+</main>
+<div id="site-footer"></div>
+<script src="js/common.js"></script>
+<script>renderLayout("index.html");</script>
+<script>
+loadBooks().then(bs=>{
+  statBooks.textContent=bs.length;
+  statCats.textContent=new Set(bs.map(b=>b.category)).size;
+  latest.innerHTML=bs.slice(-6).reverse().map(b=>bookCard(b)).join("");
+});
+</script></body></html>

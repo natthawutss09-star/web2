@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>เข้าสู่ระบบหลังบ้าน</title><link rel="stylesheet" href="../css/style.css"></head>
+<body><div class="login-wrap"><div class="panel">
+ <h2 class="section-title" style="font-size:26px;margin-bottom:6px">🔐 หลังบ้าน</h2>
+ <p class="section-subtitle" style="margin-bottom:20px">เข้าสู่ระบบเพื่อจัดการหนังสือ</p>
+ <div class="error" id="err">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
+ <div class="field"><label>ชื่อผู้ใช้</label><input id="u" autofocus></div>
+ <div class="field"><label>รหัสผ่าน</label><input id="p" type="password"></div>
+ <button class="button button-primary" style="width:100%" id="go">เข้าสู่ระบบ</button>
+ <p style="margin-top:16px;text-align:center"><a href="../index.html">← กลับหน้าเว็บไซต์</a></p>
+</div></div>
+<script>
+// เปลี่ยนชื่อผู้ใช้/รหัสผ่านได้ที่นี่ (เป็นการป้องกันฝั่งเบราว์เซอร์เท่านั้น ไม่ปลอดภัยจริง)
+const ADMIN_USER="admin", ADMIN_PASS="123456789";
+function login(){
+  if(u.value===ADMIN_USER&&p.value===ADMIN_PASS){sessionStorage.setItem("pali_admin","1");location.href="dashboard.html"}
+  else err.style.display="block";
+}
+go.onclick=login;p.onkeydown=e=>{if(e.key==="Enter")login()};
+</script></body></html>

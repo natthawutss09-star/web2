@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>จัดการหนังสือ | หลังบ้าน</title><link rel="stylesheet" href="../css/style.css"></head>
+<body>
+<header><div class="container"><div class="navbar">
+ <div class="logo"><div class="logo-icon">🛠️</div><div><div class="logo-title">หลังบ้าน</div><div class="logo-subtitle">จัดการคลังหนังสือบาลี</div></div></div>
+ <div style="display:flex;gap:10px"><a href="../index.html" class="button button-secondary small" target="_blank">ดูเว็บไซต์</a><button class="button button-danger small" id="logout">ออกจากระบบ</button></div>
+</div></div></header>
+<main class="section"><div class="container">
+ <div id="banner" class="panel" style="display:none;margin-bottom:16px;padding:14px 20px;font-weight:700"></div>
+ <div class="stats" style="margin-bottom:24px">
+  <div class="stat-box"><div class="stat-number" id="sBooks">0</div><div class="stat-label">หนังสือทั้งหมด</div></div>
+  <div class="stat-box"><div class="stat-number" id="sCats">0</div><div class="stat-label">หมวดหมู่ที่ใช้งาน</div></div>
+  <div class="stat-box"><div class="stat-number" id="sMode" style="font-size:20px;line-height:2.2">…</div><div class="stat-label">โหมดบันทึกข้อมูล</div></div>
+ </div>
+
+ <div class="panel" style="margin-bottom:24px">
+  <h2 class="section-title" style="font-size:22px;margin-bottom:14px" id="formTitle">เพิ่มหนังสือใหม่</h2>
+  <form id="f"><input type="hidden" id="id">
+   <div class="form-grid">
+    <div class="field full"><label>ชื่อหนังสือ *</label><input id="title" required></div>
+    <div class="field"><label>หมวดหมู่ *</label><select id="category"></select></div>
+    <div class="field"><label>ระดับ</label><input id="level" placeholder="เช่น ระดับ: ป.ธ.๕"></div>
+    <div class="field"><label>ขนาดไฟล์</label><input id="size" placeholder="เช่น 12 MB (อัปโหลดแล้วใส่ให้อัตโนมัติ)"></div>
+    <div class="field"><label>ลิงก์/พาธไฟล์ PDF *</label><input id="file" required placeholder="books/ชื่อไฟล์.pdf หรือลิงก์ MediaFire / Google Drive"></div>
+    <div class="field full"><label>อัปโหลดไฟล์ PDF (ไม่ต้องพิมพ์พาธเอง)</label><input type="file" id="pdf" accept="application/pdf"><div id="upMsg" class="section-subtitle" style="font-size:13px"></div></div>
+    <div class="field full"><label>คำอธิบาย</label><textarea id="desc" rows="3"></textarea></div>
+   </div>
+   <button class="button button-primary" id="saveBtn">บันทึก</button>
+   <button type="button" class="button button-secondary hidden" id="cancel">ยกเลิกการแก้ไข</button>
+  </form>
+ </div>
+
+ <div class="panel">
+  <div class="section-head" style="margin-bottom:0"><h2 class="section-title" style="font-size:22px">รายการหนังสือ</h2>
+   <div class="search-box"><input id="s" placeholder="ค้นหาในตาราง..."></div></div>
+  <div class="toolbar">
+   <button class="button button-secondary small" id="exportBtn">⬇ สำรองข้อมูล (books.json)</button>
+   <button class="button button-secondary small" id="importBtn">⬆ นำเข้า JSON</button>
+   <button class="button button-danger small" id="resetBtn">รีเซ็ตเป็นค่าเริ่มต้น</button>
+   <input type="file" id="importFile" accept=".json" class="hidden">
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>#</th><th>ชื่อหนังสือ</th><th>หมวดหมู่</th><th>ระดับ</th><th>ขนาด</th><th>จัดการ</th></tr></thead><tbody id="rows"></tbody></table></div>
+ </div>
+</div></main>
+<script src="../js/common.js"></script>
+<script>
+if(!sessionStorage.getItem("pali_admin")) location.href="login.html";
+const TOKEN_KEY="pali_admin_token";
+logout.onclick=()=>{sessionStorage.removeItem("pali_admin");sessionStorage.removeItem(TOKEN_KEY);location.href="login.html"};
+category.innerHTML=CATEGORIES.map(c=>`<option>${c}</option>`).join("");
+
+let books=[], serverMode=false;
+const authFetch=(url,opt={})=>fetch(BASE+url,{...opt,headers:{...(opt.headers||{}),Authorization:"Bearer "+(sessionStorage.getItem(TOKEN_KEY)||"")}});
+
+function note(msg,kind){
+  banner.style.display="block";banner.textContent=msg;
+  banner.style.borderColor=kind==="err"?"#dc2626":kind==="ok"?"#16a34a":"#d97706";
+  banner.style.color=kind==="err"?"#b91c1c":kind==="ok"?"#15803d":"#92400e";
+}
+
+function render(){
+  sBooks.textContent=books.length; sCats.textContent=new Set(books.map(b=>b.category)).size;
+  const k=s.value.trim().toLowerCase();
+  rows.innerHTML=books.filter(b=>(b.title+b.category+b.level).toLowerCase().includes(k)).map(b=>`<tr>
+   <td>${b.id}</td><td>${esc(b.title)}</td><td>${esc(b.category)}</td><td>${esc(b.level)}</td><td>${esc(b.size)}</td>
+   <td style="white-space:nowrap"><button class="button button-secondary small" onclick="edit(${b.id})">แก้ไข</button>
+   <button class="button button-danger small" onclick="del(${b.id})">ลบ</button></td></tr>`).join("");
+}
+
+// บันทึก: มีเซิร์ฟเวอร์ → เขียน data/books.json (หน้าบ้านเห็นทันที) / ไม่มี → เก็บร่างในเครื่องนี้
+async function persist(){
+  render();
+  if(serverMode){
+    try{
+      const r=await authFetch("api/books",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(books)});
+      if(r.status===401){note("เซสชันหมดอายุ กำลังพาไปหน้าเข้าสู่ระบบ…","err");setTimeout(()=>logout.click(),1200);return}
+      if(!r.ok)throw new Error((await r.json()).error||r.status);
+      note("✔ บันทึกแล้ว — หน้าเว็บอัปเดตทันที","ok");
+    }catch(e){note("✖ บันทึกไม่สำเร็จ: "+e.message,"err")}
+  }else{
+    try{localStorage.setItem(DRAFT_KEY,JSON.stringify(books))}catch(e){}
+    note("บันทึกเป็นร่างในเครื่องนี้เท่านั้น (ยังไม่มีเซิร์ฟเวอร์) — กด “สำรองข้อมูล” แล้วนำ books.json ไปวางทับที่ data/books.json บนเว็บ","warn");
+  }
+}
+function resetForm(){f.reset();id.value="";upMsg.textContent="";formTitle.textContent="เพิ่มหนังสือใหม่";cancel.classList.add("hidden")}
+function edit(n){
+  const b=books.find(x=>x.id===n); if(!b)return;
+  id.value=b.id;title.value=b.title;category.value=b.category;level.value=b.level;size.value=b.size;file.value=b.file;desc.value=b.desc;
+  formTitle.textContent="แก้ไขหนังสือ #"+b.id;cancel.classList.remove("hidden");scrollTo({top:0,behavior:"smooth"});
+}
+function del(n){const b=books.find(x=>x.id===n);if(b&&confirm(`ลบ "${b.title}" ?\n(ไฟล์ PDF ใน books/ จะไม่ถูกลบ)`)){books=books.filter(x=>x.id!==n);persist()}}
+cancel.onclick=resetForm; s.oninput=render;
+f.onsubmit=async e=>{
+  e.preventDefault();
+  const d={title:title.value.trim(),category:category.value,level:level.value.trim(),size:size.value.trim(),file:file.value.trim(),desc:desc.value.trim()};
+  if(id.value){books=books.map(b=>b.id==id.value?{...b,...d}:b)}
+  else{books.push({id:Math.max(0,...books.map(b=>b.id))+1,...d})}
+  resetForm();await persist();
+};
+
+// อัปโหลด PDF ขึ้นเซิร์ฟเวอร์ (ลงโฟลเดอร์ books/) แล้วเติมพาธและขนาดให้อัตโนมัติ
+pdf.onchange=async()=>{
+  const file0=pdf.files[0]; if(!file0)return;
+  upMsg.textContent="กำลังอัปโหลด "+file0.name+" …";
+  try{
+    const r=await authFetch("api/upload?name="+encodeURIComponent(file0.name),{method:"POST",headers:{"Content-Type":"application/pdf"},body:file0});
+    if(r.status===401){logout.click();return}
+    const j=await r.json(); if(!r.ok)throw new Error(j.error||r.status);
+    file.value=j.path; size.value=j.size; upMsg.textContent="✔ อัปโหลดแล้ว: "+j.path+" ("+j.size+") — กด “บันทึก” เพื่อเพิ่มเข้ารายการ";
+  }catch(e){upMsg.textContent="✖ อัปโหลดไม่สำเร็จ: "+e.message}
+  pdf.value="";
+};
+
+exportBtn.onclick=()=>{
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(books,null,2)],{type:"application/json"}));
+  a.download="books.json";a.click();
+};
+importBtn.onclick=()=>importFile.click();
+importFile.onchange=async()=>{
+  try{const d=JSON.parse(await importFile.files[0].text());
+   if(!Array.isArray(d)||!d.every(x=>x.title&&x.file))throw 0;
+   books=d.map((x,i)=>({id:x.id||i+1,category:CATEGORIES[0],level:"",desc:"",size:"",...x}));await persist();alert("นำเข้าสำเร็จ "+books.length+" รายการ");
+  }catch(e){alert("ไฟล์ JSON ไม่ถูกต้อง")}
+  importFile.value="";
+};
+resetBtn.onclick=()=>{if(confirm("รีเซ็ตรายการทั้งหมดเป็นค่าเริ่มต้น? (หน้าเว็บจะเปลี่ยนตามทันที)")){books=defaultBooks();persist()}};
+
+(async()=>{
+  // ตรวจว่ามีเซิร์ฟเวอร์ (server.js) อยู่หรือไม่
+  serverMode=await fetch(BASE+"api/ping").then(r=>r.ok&&(r.headers.get("content-type")||"").includes("json")).catch(()=>false);
+  if(serverMode&&!sessionStorage.getItem(TOKEN_KEY)){location.href="login.html";return}
+  sMode.textContent=serverMode?"เซิร์ฟเวอร์":"ร่างในเครื่อง";
+  if(serverMode){
+    pdf.disabled=false;
+    books=await loadBooks();
+  }else{
+    pdf.disabled=true;upMsg.textContent="อัปโหลดไม่ได้ในโหมดนี้ — รัน node server.js เพื่อเปิดใช้งาน";
+    let draft=null;try{draft=JSON.parse(localStorage.getItem(DRAFT_KEY))}catch(e){}
+    books=Array.isArray(draft)?draft:await loadBooks();
+    note("ยังไม่ได้เชื่อมกับเซิร์ฟเวอร์: การแก้ไขจะเห็นเฉพาะในเครื่องนี้ ถ้าต้องการให้ผู้เข้าชมเห็น ให้รัน node server.js หรือสำรอง books.json ไปวางที่ data/","warn");
+  }
+  render();
+})();
+</script></body></html>
